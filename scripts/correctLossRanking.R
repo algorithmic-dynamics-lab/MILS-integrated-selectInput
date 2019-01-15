@@ -1,55 +1,55 @@
 
 source("edgeAndVertexKnockout.R")
 
-starGraph <- loadGraphPA("../data/starGraphAdjMatrix.csv")
+starGraph <- load_graph("../data/starGraphAdjMatrix.csv")
 
-pe        <- calculatePerturbationByEdgeDeletion(starGraph, 4, 1)
+pe <- calculate_loss_by_edge(starGraph, 4, 1)
 
 #rank losses
-bdmLossesDf <- pe[!pe$bdmIncrease, ]
+bdmLossesDf <- pe[!pe$bdm_increase, ]
 
 print(bdmLossesDf)
 
-bdmLossesDf$perturbationsRank <-rank(
-  as.numeric(bdmLossesDf$bdmDifferenceAfterDeletion),
+bdmLossesDf$perturbations_rank <-rank(
+  as.numeric(bdmLossesDf$bdm_difference),
   ties.method="min")
 
-maxLossRank <- max(bdmLossesDf$perturbationsRank)
+maxLossRank <- max(bdmLossesDf$perturbations_rank)
 
 #rank gains
-bdmGainsDf <- pe[pe$bdmIncrease, ]
+bdmGainsDf <- pe[pe$bdm_increase, ]
 
-bdmGainsDf$perturbationsRank <-rank(
-  as.numeric(bdmGainsDf$bdmDifferenceAfterDeletion),ties.method="min"
+bdmGainsDf$perturbations_rank <-rank(
+  as.numeric(bdmGainsDf$bdm_difference),ties.method="min"
 ) + maxLossRank
 
 rankedDf <- rbind(bdmLossesDf, bdmGainsDf)
-rankedDf <- rankedDf[order(rankedDf$perturbationsRank), ]
+rankedDf <- rankedDf[order(rankedDf$perturbations_rank), ]
 
 print(rankedDf)
 
 correctLossRanking <- function (pe){
   
-  pe        <- calculatePerturbationByEdgeDeletion(starGraph, 4, 1)
+  pe <- calculate_loss_by_edge(starGraph, 4, 1)
   
   #rank losses
-  bdmLossesDf <- pe[!pe$bdmIncrease, ]
+  bdmLossesDf <- pe[!pe$bdm_increase, ]
   
-  bdmLossesDf$perturbationsRank <-rank(
-    as.numeric(bdmLossesDf$bdmDifferenceAfterDeletion),
+  bdmLossesDf$perturbations_rank <-rank(
+    as.numeric(bdmLossesDf$bdm_difference),
     ties.method="min")
   
-  maxLossRank <- max(bdmLossesDf$perturbationsRank)
+  maxLossRank <- max(bdmLossesDf$perturbations_rank)
   
   #rank gains
-  bdmGainsDf <- pe[pe$bdmIncrease, ]
+  bdmGainsDf <- pe[pe$bdm_increase, ]
   
-  bdmGainsDf$perturbationsRank <-rank(
-    as.numeric(bdmGainsDf$bdmDifferenceAfterDeletion),ties.method="min"
+  bdmGainsDf$perturbations_rank <-rank(
+    as.numeric(bdmGainsDf$bdm_difference),ties.method="min"
   ) + maxLossRank
   
   rankedDf <- rbind(bdmLossesDf, bdmGainsDf)
-  rankedDf <- rankedDf[order(rankedDf$perturbationsRank), ]
+  rankedDf <- rankedDf[order(rankedDf$perturbations_rank), ]
   
   return(rankedDf)
   

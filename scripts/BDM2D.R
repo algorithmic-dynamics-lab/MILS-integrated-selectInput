@@ -1,87 +1,76 @@
+# Load 4 x 4 CTM values
+four_by_four_ctm <- read.csv("data/K-4x4.csv",
+                             stringsAsFactors = FALSE,
+                             colClasses = c("character", "numeric"),
+                             header = FALSE)
 
+colnames(four_by_four_ctm) <- c("square", "CTM")
+rownames(four_by_four_ctm) <- four_by_four_ctm$square
+four_by_four_ctm$square <- NULL
 
-#load 4 x 4 CTM values
-fourByFourCTM <- read.csv("data/K-4x4.csv",
-                          stringsAsFactors=FALSE, 
-                          colClasses = 
-                            c("character", "numeric"),
-                          header = FALSE)
+# Load 3 x 3 CTM values
+three_by_three_ctm <- read.csv("data/K-3x3.csv",
+                               stringsAsFactors = FALSE,
+                               colClasses = c("character", "numeric"),
+                               header = FALSE)
 
-colnames(fourByFourCTM) <- c("square", "CTM")
-rownames(fourByFourCTM) <- fourByFourCTM$square
-fourByFourCTM$square <- NULL
+colnames(three_by_three_ctm) <- c("square", "CTM")
+rownames(three_by_three_ctm) <- three_by_three_ctm$square
+three_by_three_ctm$square <- NULL
 
-#load 3 x 3 CTM values
-threeByThreeCTM <- read.csv("data/K-3x3.csv",
-                            stringsAsFactors=FALSE, 
-                            colClasses = 
-                              c("character", "numeric"),
-                            header = FALSE)
-
-colnames(threeByThreeCTM) <- c("square", "CTM")
-rownames(threeByThreeCTM) <- threeByThreeCTM$square
-threeByThreeCTM$square <- NULL
-
-
-##split matrices in blocks
-require(purrr)
-ind <- function(matDim, blockSize, offset) {
-  Map(`:`, seq(1, matDim-blockSize+1, by = offset), 
-      seq(blockSize, matDim, by = offset))
+# Split matrices in blocks
+ind <- function(mat_dim, block_size, offset) {
+  
+  Map(`:`, seq(1, mat_dim - block_size + 1, by = offset),
+      seq(block_size, mat_dim, by = offset))
 }
 
-# this is a helper function that generates subset indexing
-# according to dimension of the 
-# matrix, the first sequence constructs the starting point of the subset index considering 
-# the offset while the second sequence constructs 
-# the ending point of the subset index
-myPartition <- function(mat, blockSize, offset) {
-  lapply(cross2(ind(nrow(mat),blockSize,offset), 
-                ind(ncol(mat),blockSize,offset)), 
+# This is a helper function that generates subset indexing
+# of the matrix according to its dimension
+my_partition <- function(mat, block_size, offset) {
+  
+  lapply(cross2(ind(nrow(mat), block_size, offset),
+                ind(ncol(mat), block_size, offset)),
          function(i) mat[i[[1]], i[[2]]])
 }
 
-#used to lookup entries in fourByFourCTM and threeByThreeCTM
-stringify <- function(smallBlock){
-  paste0(c(t(smallBlock)), collapse ="")
+# Used to look up entries in the tables
+# four_by_four_ctm and three_by_three_ctm
+stringify <- function(small_block) {
+  paste0(c(t(small_block)), collapse = "")
 }
 
-blockEntropy <- function(mat, blockSize, offset){
+# Calculate the block entropy
+block_entropy <- function(mat, block_size, offset) {
   
-  parts <- myPartition(mat, blockSize, offset)
+  parts <- my_partition(mat, block_size, offset)
+  flat_squares <- unlist(lapply(parts, stringify))
   
-  flatSquares <- unlist(lapply(parts, stringify))
+  squares_tally <- as.data.frame(table(flat_squares))
+  rownames(squares_tally) <- squares_tally$flat_square
+  squares_tally$flat_squares <- NULL
   
-  squaresTally <- as.data.frame(table(flatSquares))
+  probabilities = squares_tally[, 1] / nrow(squares_tally)
   
-  rownames(squaresTally) <- squaresTally$flatSquare
-  
-  squaresTally$flatSquares <- NULL
-  
-  probs = squaresTally[, 1]/nrow(squaresTally)
-  
-  return(-sum(probs*log2(probs)))
-  
+  return(-sum(probabilities * log2(probabilities)))
 }
 
-bdm2D <- function(mat, blockSize, offset){
+# Get BDM value of a given matrix 'mat'
+bdm2D <- function(mat, block_size, offset) {
   
-  parts <- myPartition(mat, blockSize, offset)
+  parts <- my_partition(mat, block_size, offset)
+  flat_squares <- unlist(lapply(parts, stringify))
   
-  flatSquares <- unlist(lapply(parts, stringify))
+  squares_tally <- as.data.frame(table(flat_squares))
+  rownames(squares_tally) <- squares_tally$flat_squares
+  squares_tally$flat_squares <- NULL
   
-  squaresTally <- as.data.frame(table(flatSquares))
-  
-  rownames(squaresTally) <- squaresTally$flatSquares
-  
-  squaresTally$flatSquares <- NULL
-  
-  if(blockSize == 4){
-    bdm <- (sum(fourByFourCTM[rownames(squaresTally),]) 
-      + sum(log2(squaresTally$Freq)))
-  } else{
-    bdm <- (sum(threeByThreeCTM[rownames(squaresTally),]) 
-      + sum(log2(squaresTally$Freq)))
+  if (block_size == 4) {
+    bdm <- (sum(four_by_four_ctm[rownames(squares_tally), ]) 
+            + sum(log2(squares_tally$Freq)))
+  } else {
+    bdm <- (sum(three_by_three_ctm[rownames(squares_tally), ]) 
+            + sum(log2(squares_tally$Freq)))
   }
   
   return(bdm)
@@ -91,11 +80,11 @@ bdm2D <- function(mat, blockSize, offset){
 # set.seed(42)
 # m99 <- apply(matrix(0, 9, 9), c(1,2), function(x) sample(c(0,1),1))
 # m99
-# 
+#
 # testResult1 <- bdm2D(m88, 4, 4)
 # testResult1
-# 
-# 
+#
+#
 # testResult2 <- bdm2D(m99, 3, 3)
 # testResult2
 
