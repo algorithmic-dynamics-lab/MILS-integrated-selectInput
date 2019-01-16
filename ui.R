@@ -82,7 +82,7 @@ shinyUI(
                             
                              sliderInput(inputId="number_of_reductions",
                                          label = "Number of reductions to be performed",
-                                         min = 1, max = 150, value = 1, step = 1)
+                                         min = 1, max = 145, value = 1, step = 1)
                             
                           )
                           

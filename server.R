@@ -48,10 +48,10 @@ shinyServer(function(input, output, session) {
     
   })
   
-  observeEvent(input$reset_graphs_button,{
+  observeEvent(input$reset_graphs_button, {
     
     reactive_data$g <- reactive_data$g_original
-    reactive_data$g_reduced <- reactive_data$g_original
+    #reactive_data$g_reduced <- reactive_data$g_original
 
   })
   
@@ -60,13 +60,13 @@ shinyServer(function(input, output, session) {
     
     in_file <- input$file1
     
-    if (is.null(in_file$datapath)){
+    if (is.null(in_file$datapath)) {
       
       
     } else {
       
-      reactive_data$loss_vertices <- correct_loss_ranking(calculate_loss_by_vertex(g, 4, 1))
-      reactive_data$loss_edges <- correct_loss_ranking(calculate_loss_by_edge(g, 4, 1))
+      reactive_data$loss_vertices <- correct_loss_ranking(calculate_loss_by_vertex(reactive_data$g, 4, 1))
+      reactive_data$loss_edges <- correct_loss_ranking(calculate_loss_by_edge(reactive_data$g, 4, 1))
       reactive_data$g <- load_graph(in_file$datapath)
       reactive_data$g_original <- reactive_data$g
       reactive_data$g_reduced <- reactive_data$g
@@ -81,9 +81,9 @@ shinyServer(function(input, output, session) {
 
     elems <- 0
     
-    if(input$number_of_elements!=0){
+    if (input$number_of_elements != 0) {
     
-      if(input$elements_to_delete == "vertices"){ 
+      if (input$elements_to_delete == "vertices") { 
           
          elems <- vcount(reactive_data$g)
          
@@ -91,9 +91,10 @@ shinyServer(function(input, output, session) {
          
          reactive_data$g_reduced <- delete_vertices(reactive_data$g, 
                                                   verticesToDelete[1:input$number_of_elements])
+         
       } 
       
-      if(input$elements_to_delete == "edges") { 
+      if (input$elements_to_delete == "edges") { 
       
           elems <- ecount(reactive_data$g)
           
@@ -116,7 +117,7 @@ shinyServer(function(input, output, session) {
   
   output$graph_plot <- renderPlot({
     
-    if(input$show_adjacency_matrix==TRUE){
+    if (input$show_adjacency_matrix == TRUE) {
       
       plot_adj_matrix(unname_graph(reactive_data$g))
 
@@ -135,7 +136,7 @@ shinyServer(function(input, output, session) {
 
   output$reduced_graph_plot <- renderPlot({
     
-    if(input$show_adjacency_matrix==TRUE){
+    if (input$show_adjacency_matrix == TRUE) {
       
       plot_adj_matrix(unname_graph(reactive_data$g_reduced))
       
@@ -169,13 +170,13 @@ shinyServer(function(input, output, session) {
   observeEvent(input$file2, {
     in_file <- input$file2
     
-    if(is.null(in_file$datapath)) {
+    if (is.null(in_file$datapath)) {
       
     } else {
       react_image$im <- readImage(in_file$datapath)
     }
     
-  }, ignoreInit = FALSE)
+  }, ignoreNULL = FALSE)
   
   observeEvent(input$number_of_reductions, {
     
@@ -187,7 +188,7 @@ shinyServer(function(input, output, session) {
         elems <- nrow(react_image$im)
       }
       
-      if(input$image_elements == 'columns') {
+      if (input$image_elements == 'columns') {
         elems <- ncol(react_image$im)
       }
     }
@@ -195,7 +196,7 @@ shinyServer(function(input, output, session) {
     updateSliderInput(session, "number_of_reductions",
                       max = elems-1, step = 1)
     
-  }, ignoreNULL = FALSE)
+  })
   
   output$image_plot <- renderPlot({
     imageShow(react_image$im)

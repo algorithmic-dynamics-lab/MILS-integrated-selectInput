@@ -86,7 +86,7 @@ calculate_loss_by_edge <- function(orig_graph, block_size, offset){
     
     deleted_edge_adj_matrix  <- as.matrix(as_adjacency_matrix(deleted_edge_graph)) 
     
-    #added $bdm_value
+    # Added $bdm_value
     deleted_edge_bdm        <- bdm2D(deleted_edge_adj_matrix, 
                                    block_size = block_size, 
                                    offset = offset)
