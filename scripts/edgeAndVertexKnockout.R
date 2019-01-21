@@ -1,127 +1,112 @@
-
 require("igraph")
 require("purrr")
 
-correctLossRanking <- function (lossRanking){
+correct_loss_ranking <- function(loss_ranking) {
+  # For rank losses
+  bdm_losses_df <- loss_ranking[!loss_ranking$bdm_increase, ]
   
-  #rank losses
-  bdmLossesDf <- lossRanking[!lossRanking$bdmIncrease, ]
+  bdm_losses_df$perturbations_rank <- rank(as.numeric(bdm_losses_df$bdm_difference),
+                                           ties.method = "min")
   
-  bdmLossesDf$perturbationsRank <-rank(
-    as.numeric(bdmLossesDf$bdmDifferenceAfterDeletion),
-    ties.method="min")
+  max_loss_rank <- max(bdm_losses_df$perturbations_rank)
   
-  maxLossRank <- max(bdmLossesDf$perturbationsRank)
+  # For rank gains
+  bdm_gains_df <- loss_ranking[loss_ranking$bdm_increase, ]
   
-  #rank gains
-  bdmGainsDf <- lossRanking[lossRanking$bdmIncrease, ]
+  bdm_gains_df$perturbations_rank <- rank(as.numeric(bdm_gains_df$bdm_difference),
+                                          ties.method = "min") + max_loss_rank
   
-  bdmGainsDf$perturbationsRank <-rank(
-    as.numeric(bdmGainsDf$bdmDifferenceAfterDeletion),ties.method="min"
-  ) + maxLossRank
+  ranked_df <- rbind(bdm_losses_df, bdm_gains_df)
+  ranked_df <- ranked_df[order(ranked_df$perturbations_rank), ]
   
-  rankedDf <- rbind(bdmLossesDf, bdmGainsDf)
-  rankedDf <- rankedDf[order(rankedDf$perturbationsRank), ]
-  
-  return(rankedDf)
-  
+  return(ranked_df)
 }
 
-calculateLossByVertexDeletion <- function(origGraph, blockSize, offset){
+calculate_loss_by_vertex <- function(orig_graph, block_size, offset){
   
-  origMatrix  <- as.matrix(as_adjacency_matrix(origGraph))
+  orig_matrix <- as.matrix(as_adjacency_matrix(orig_graph))
   
-  bdmOrig     <- bdm2D(origMatrix, 
-                       blockSize = blockSize, 
-                       offset = offset) 
+  bdm_orig <- bdm2D(orig_matrix, block_size, offset) 
   
-  vertexPerturbationsDF <- as_data_frame(origGraph, 
-                                         what = "vertices")
+  vertex_perturbations_df <- as_data_frame(orig_graph, what = "vertices")
   
-  computedCols <- c("bdmValue",
-                    "bdmDifferenceAfterDeletion", 
-                    "bdmIncrease")
+  computed_cols <- c("bdm_value", "bdm_difference", "bdm_increase")
   
-  vertexPerturbationsDF[, computedCols] <- NA
+  vertex_perturbations_df[, computed_cols] <- NA
   
-  for(i in 1:nrow(vertexPerturbationsDF)){
+  for(i in 1:nrow(vertex_perturbations_df)){
     
-    delMat          <- as.matrix(as_adjacency_matrix(
-                          delete_vertices(origGraph, 
-                                        V(origGraph)[i])))
+    deleted_vertex_matrix <- as.matrix(as_adjacency_matrix(
+                                          delete_vertices(orig_graph, 
+                                                    V(orig_graph)[i])))
     
-    bdmValueDel     <- bdm2D(delMat, 
-                             blockSize = blockSize, 
-                             offset = offset)
+    deleted_edge_bdm <- bdm2D(deleted_vertex_matrix, block_size, offset)
    
-    vertexPerturbationsDF[i, ]$bdmValue  <- bdmValueDel
+    vertex_perturbations_df[i, ]$bdm_value <- deleted_edge_bdm
     
-    bdmDiff         <- bdmOrig - bdmValueDel 
-    vertexPerturbationsDF[i, ]$bdmDifferenceAfterDeletion <- bdmDiff
+    vertex_perturbations_df[i, ]$bdm_difference <- bdm_orig - deleted_edge_bdm 
     
-    bdmIncrease     <- (bdmValueDel > bdmOrig)
-    vertexPerturbationsDF[i, ]$bdmIncrease <- bdmIncrease
+    increase <- (deleted_edge_bdm > bdm_orig)
+    vertex_perturbations_df[i, ]$bdm_increase <- increase
   }
   
 
-  vertexPerturbationsDF$perturbationsRank <-rank(
-    -as.numeric(vertexPerturbationsDF$bdmDifferenceAfterDeletion),
+  vertex_perturbations_df$perturbations_rank <-rank(
+    -as.numeric(vertex_perturbations_df$bdm_difference),
         ties.method="min")
   
 
-  return (vertexPerturbationsDF)
+  return (vertex_perturbations_df)
 }
 
-formatEdgesForDeletion <- function(edgeLoss){
-  formattedEdges <- paste0(edgeLoss$from,"|", edgeLoss$to)
-  return (formattedEdges)
+format_edges <- function(edge_loss){
+  formatted_edges <- paste0(edge_loss$from,"|", edge_loss$to)
+  return (formatted_edges)
 }
 
-calculateLossByEdgeDeletion <- function(origGraph, blockSize, offset){
+calculate_loss_by_edge <- function(orig_graph, block_size, offset){
   
-  origMatrix <- as.matrix(as_adjacency_matrix(origGraph))
+  orig_matrix <- as.matrix(as_adjacency_matrix(orig_graph))
   
-  bdmOrig    <- bdm2D(origMatrix, blockSize = blockSize, 
-                      offset = offset)
+  bdm_orig    <- bdm2D(orig_matrix, block_size = block_size, offset = offset)
   
-  edgePerturbationsDF     <- as_data_frame(origGraph, what = "edges")
+  edge_perturbations_df     <- as_data_frame(orig_graph, what = "edges")
   
-  computedCols <- c("bdmValue",
-                    "bdmDifferenceAfterDeletion", 
-                    "bdmIncrease")
+  computed_cols <- c("bdm_value",
+                    "bdm_difference", 
+                    "bdm_increase")
   
-  edgePerturbationsDF[, computedCols] <- NA
+  edge_perturbations_df[, computed_cols] <- NA
   
-  for(i in 1:nrow(edgePerturbationsDF)){
+  for(i in 1:nrow(edge_perturbations_df)){
     
-    deletedEdgeGraph  <- delete_edges(origGraph, 
-                                      paste0(edgePerturbationsDF[i, ]$from,
-                                            "|",edgePerturbationsDF[i, ]$to))
+    deleted_edge_graph  <- delete_edges(orig_graph, 
+                                      paste0(edge_perturbations_df[i, ]$from,
+                                            "|",edge_perturbations_df[i, ]$to))
     
-    deletedEdgeAdjMatrix  <- as.matrix(as_adjacency_matrix(deletedEdgeGraph)) 
+    deleted_edge_adj_matrix  <- as.matrix(as_adjacency_matrix(deleted_edge_graph)) 
     
-    #added $bdmValue
-    deletedEdgeBDM        <- bdm2D(deletedEdgeAdjMatrix, 
-                                   blockSize = blockSize, 
+    # Added $bdm_value
+    deleted_edge_bdm        <- bdm2D(deleted_edge_adj_matrix, 
+                                   block_size = block_size, 
                                    offset = offset)
     
-    edgePerturbationsDF[i, ]$bdmValue <- deletedEdgeBDM
+    edge_perturbations_df[i, ]$bdm_value <- deleted_edge_bdm
     
-    edgePerturbationsDF[i, ]$bdmDifferenceAfterDeletion    <- (bdmOrig - deletedEdgeBDM) 
+    edge_perturbations_df[i, ]$bdm_difference <- (bdm_orig - deleted_edge_bdm) 
     
-    edgePerturbationsDF[i, ]$bdmIncrease           <- (deletedEdgeBDM > bdmOrig) 
-    
+    edge_perturbations_df[i, ]$bdm_increase <- (deleted_edge_bdm > bdm_orig) 
   }
   
   #TODO: test by commenting this out
-  edgePerturbationsDF$perturbationsRank <- rank(
-    #TODO: changed result from - as.numeric, check the same in vertexPerturbationsDF
-    -as.numeric(edgePerturbationsDF$bdmDiff), ties.method ="min"
+  edge_perturbations_df$perturbations_rank <- rank(
+    #TODO: changed result from - as.numeric, check the same in vertex_perturbations_df
+    -as.numeric(edge_perturbations_df$bdm_diff), ties.method = "min"
   )
   
-  edgePerturbationsDF <- correctLossRanking(edgePerturbationsDF)
+  edge_perturbations_df <- correct_loss_ranking(edge_perturbations_df)
   
-  return(edgePerturbationsDF)
+  return(edge_perturbations_df)
 }
 
 
@@ -145,32 +130,32 @@ calculateLossByEdgeDeletion <- function(origGraph, blockSize, offset){
 # plot(td)
 #######################################
 # 
-#edgePerturbationsDF <- calculatePerturbationByEdgeDeletion(testGraph, 4, 1)
+#edge_perturbations_df <- calculatePerturbationByEdgeDeletion(testGraph, 4, 1)
 # 
-# vertexPal <- getColorRampPalette(vertexPerturbationsDF)
-# edgePal <- getColorRampPalette(edgePerturbationsDF)
+# vertexPal <- getColorRampPalette(vertex_perturbations_df)
+# edgePal <- getColorRampPalette(edge_perturbations_df)
 # 
-# E(testGraph)$color <- edgePal(ecount(testGraph))[edgePerturbationsDF$perturbationsRank]
-# V(testGraph)$color <- vertexPal(vcount(testGraph))[vertexPerturbationsDF$perturbationsRank]
+# E(testGraph)$color <- edgePal(ecount(testGraph))[edge_perturbations_df$perturbations_rank]
+# V(testGraph)$color <- vertexPal(vcount(testGraph))[vertex_perturbations_df$perturbations_rank]
 # 
 # plot(testGraph, vertex.label.family = "Arial Black", edge.arrow.size = .1, vertex.size = 25,
 #      vertex.label.color="black")
 # 
-# vertexPerturbationsDF <- calculateLossByVertexDeletion(testGraph, 4, 1)
-# print(vertexPerturbationsDF)
+# vertex_perturbations_df <- calculate_loss_by_vertex(testGraph, 4, 1)
+# print(vertex_perturbations_df)
 
 ###############
 
 # starGraph <- loadGraphPA("../data/starGraphAdjMatrix.csv")
 # 
-# lossRanking        <- calculatePerturbationByEdgeDeletion(starGraph, 4, 1)
+# loss_ranking        <- calculatePerturbationByEdgeDeletion(starGraph, 4, 1)
 # 
-# print(lossRanking)
+# print(loss_ranking)
 # 
-# print(processBDMIncreases(starGraph))
+# print(processbdm_increases(starGraph))
 # 
-# edgePerturbationsDF <- calculatePerturbationByEdgeDeletion(starGraph, 4, 1)
-# print(edgePerturbationsDF)
+# edge_perturbations_df <- calculatePerturbationByEdgeDeletion(starGraph, 4, 1)
+# print(edge_perturbations_df)
 
 
 

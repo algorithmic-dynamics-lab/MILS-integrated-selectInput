@@ -1,133 +1,132 @@
 require("igraph")
+require("OpenImageR")
 source("scripts/BDM1D.R")
 source("scripts/BDM2D.R")
-source("scripts/compressionLength.R")
 source("scripts/loadGraph.R")
-source("scripts/edgeAndVertexKnockout.R")
 source("scripts/listEdges.R")
 source("scripts/matrixPlot.R")
 source("scripts/unnameGraph.R")
+source("scripts/reduceImage.R")
+source("scripts/compressionLength.R")
+source("scripts/edgeAndVertexKnockout.R")
 source("scripts/simultaneousAttackOnStrings.R")
 
 
 shinyServer(function(input, output, session) {
   
-  ## MILS 2D tab
-  # the names/indices of vertices for the graph are set at loadGraph
-  g <- loadGraph("./data/starGraphAdjMatrix.csv")
+  #######################
+  ### MILS FOR GRAPHS ###
+  #######################
   
-  originalG <- g
+  # the names/indices of vertices for the graph are set at load_graph
+  g <- load_graph("./data/starGraphAdjMatrix.csv")
+  g <- set_vertex_attr(g, "name", value = seq(1:length(V(g))))
   
-  reducedG <- g
+  g_original <- g
+  g_reduced <- g
   
-  lossVertices <- correctLossRanking(calculateLossByVertexDeletion(g, 
-                                                                   blockSize=4, 
+  loss_vertices <- correct_loss_ranking(calculate_loss_by_vertex(g, 
+                                                                   block_size = 4, 
                                                                    offset = 1))
   
-  lossEdges <- correctLossRanking(calculateLossByEdgeDeletion(g, 
-                                                              blockSize = 4, 
+  loss_edges <- correct_loss_ranking(calculate_loss_by_edge(g, 
+                                                              block_size = 4, 
                                                               offset = 1))
   
-  deletionsCounter <- as.integer(1)
+  deletions_counter <- as.integer(1)
 
-  reactiveData <- reactiveValues(g = g,
-                                 reducedG = reducedG, 
-                                 originalG = originalG,
-                                 lossVertices = lossVertices,
-                                 lossEdges = lossEdges,
-                                 deletionsCounter = deletionsCounter)
+  reactive_data <- reactiveValues(g = g,
+                                  g_reduced = g_reduced, 
+                                  g_original = g_original,
+                                  loss_vertices = loss_vertices,
+                                  loss_edges = loss_edges,
+                                  deletions_counter = deletions_counter)
   
-  observeEvent(input$swapGraphsButton, {
+  observeEvent(input$swap_graphs_button, {
     
-    reactiveData$g <- reactiveData$reducedG
+    reactive_data$g <- reactive_data$g_reduced
     
   })
   
-  observeEvent(input$resetGraphsButton,{
+  observeEvent(input$reset_graphs_button, {
     
-    reactiveData$g <- reactiveData$originalG
-    reactiveData$reducedG <- reactiveData$originalG
-    
+    reactive_data$g <- reactive_data$g_original
+    #reactive_data$g_reduced <- reactive_data$g_original
+
   })
   
   
   observeEvent(input$file1, {
     
-    inFile <- input$file1
+    in_file <- input$file1
     
-    if (is.null(inFile$datapath)){
+    if (is.null(in_file$datapath)) {
       
       
     } else {
       
-      reactiveData$lossVertices <- correctLossRanking(calculateLossByVertexDeletion(g, 4, 1))
-      reactiveData$lossEdges    <- correctLossRanking(calculateLossByEdgeDeletion(g, 4, 1))
-      reactiveData$g            <- loadGraph(inFile$datapath)
-      reactiveData$reducedG     <- reactiveData$g
-      reactiveData$originalG    <- reactiveData$g
+      reactive_data$loss_vertices <- correct_loss_ranking(calculate_loss_by_vertex(reactive_data$g, 4, 1))
+      reactive_data$loss_edges <- correct_loss_ranking(calculate_loss_by_edge(reactive_data$g, 4, 1))
+      reactive_data$g <- load_graph(in_file$datapath)
+      reactive_data$g_original <- reactive_data$g
+      reactive_data$g_reduced <- reactive_data$g
       
-      reactiveData$deletionsCounter <- as.integer(1)
+      reactive_data$deletions_counter <- as.integer(1)
       
     }
     
   }, ignoreInit = FALSE)
   
-  observeEvent(input$numberOfElements, {
+  observeEvent(input$number_of_elements, {
 
     elems <- 0
-    vertices <- c()
-    edges    <- c()
     
-    if(input$numberOfElements!=0){
+    if (input$number_of_elements != 0) {
     
-      if(input$elementsToDelete == "vertices"){ 
+      if (input$elements_to_delete == "vertices") { 
           
-         elems <- vcount(reactiveData$g)
+         elems <- vcount(reactive_data$g)
          
-         verticesToDelete <- reactiveData$lossVertices$name
+         verticesToDelete <- reactive_data$loss_vertices$name
          
-         reactiveData$reducedG <- delete_vertices(reactiveData$g, 
-                                                  verticesToDelete[1:input$numberOfElements])
+         reactive_data$g_reduced <- delete_vertices(reactive_data$g, 
+                                                  verticesToDelete[1:input$number_of_elements])
+         
       } 
       
-      if(input$elementsToDelete == "edges") { 
+      if (input$elements_to_delete == "edges") { 
       
-          elems <- ecount(reactiveData$g)
+          elems <- ecount(reactive_data$g)
           
-          edgesToDelete <- formatEdgesForDeletion(reactiveData$lossEdges)
+          edges_to_delete <- format_edges(reactive_data$loss_edges)
           
-          reactiveData$reducedG <- delete_edges(reactiveData$g, 
-                                                edgesToDelete[1:input$numberOfElements])
+          reactive_data$g_reduced <- delete_edges(reactive_data$g, 
+                                                edges_to_delete[1:input$number_of_elements])
          
       }
     }
     
-    # updateSliderInput(session,
-    #                   "numberOfElements",
-    #                   max = elems-1,
-    #                   step = 1)
-    
-    updateSelectInput(session = session, 
-                      inputId = "numberOfElements",                      
-                      choices = c(1:(elems-1))
-                      )
+    updateSelectInput(session = session,
+                      inputId = "number_of_elements",                      
+                      choices = c(1:(elems-1)),
+                      selected = input$number_of_elements)
     
   }, ignoreNULL = FALSE)
   
   
   
-  output$graphPlot <- renderPlot({
+  output$graph_plot <- renderPlot({
     
-    if(input$showAdjacencyMatrix==TRUE){
+    if (input$show_adjacency_matrix == TRUE) {
       
-      plotAdjMatrix(unnameGraph(reactiveData$g))
+      plot_adj_matrix(unname_graph(reactive_data$g))
 
     }
     
     else{
-    coords <- layout_(reactiveData$g, as_star())
+    coords <- layout_(reactive_data$g, as_star())
     
-    plot(reactiveData$g,
+    plot(reactive_data$g,
          layout = coords,
          edge.arrow.size = 0.5,
          vertex.size = 25,
@@ -135,19 +134,17 @@ shinyServer(function(input, output, session) {
     }
   }) 
 
-  output$reducedGraphPlot <- renderPlot({
+  output$reduced_graph_plot <- renderPlot({
     
-    if(input$showAdjacencyMatrix==TRUE){
+    if (input$show_adjacency_matrix == TRUE) {
       
-      plotAdjMatrix(unnameGraph(reactiveData$reducedG))
+      plot_adj_matrix(unname_graph(reactive_data$g_reduced))
       
-    }
+    } else {
     
-    else{
+      coords <- layout_(reactive_data$g_reduced, as_star())
     
-      coords <- layout_(reactiveData$reducedG, as_star())
-    
-      plot(reactiveData$reducedG,
+      plot(reactive_data$g_reduced,
            layout = coords,
            edge.arrow.size = 0.5,
            vertex.size = 25,
@@ -155,41 +152,106 @@ shinyServer(function(input, output, session) {
     }
   }) 
   
-  ########### 
-  ### MILS 1D
   
-  observeEvent(input$blockSize1D, {
-    updateSliderInput(session,
-                      "blockOverlap",
-                      max = input$blockSize - 1)
+  #######################
+  ### MILS FOR IMAGES ###
+  #######################
+  
+  path <- 'data/images/1.png'
+  read_image <- readImage(path)
+  
+  im <- path %>% readImage %>% 
+        resizeImage(width = 150, height = 150, method = 'bilinear')
+  
+  im_reduced <- reduce_image(im, 4, 4, 50)
+  
+  react_image <- reactiveValues(im = im, im_reduced = im_reduced)
+  
+  observeEvent(input$file2, {
+    in_file <- input$file2
+    
+    if (is.null(in_file$datapath)) {
+      
+    } else {
+      react_image$im <- readImage(in_file$datapath)
+    }
+    
+  }, ignoreNULL = FALSE)
+  
+  observeEvent(input$number_of_reductions, {
+    
+    elems <- 0
+    
+    if (input$number_of_reductions != 0) {
+    
+      if (input$image_elements == 'rows') {
+        elems <- nrow(react_image$im)
+      }
+      
+      if (input$image_elements == 'columns') {
+        elems <- ncol(react_image$im)
+      }
+    }
+      
+    updateSliderInput(session, "number_of_reductions",
+                      max = elems-1, step = 1)
+    
   })
   
-  observeEvent(input$insertString, {
-    updateSliderInput(session,
-                      "nReduced",
-                      max = nchar(input$insertString) - 2)
+  output$image_plot <- renderPlot({
+    imageShow(react_image$im)
   })
   
-  output$origStr <- renderText({
+  output$reduction_map_plot <- renderPlot({
+    react_image$im_reduced <- reduce_image(im = react_image$im, 
+                                           block_size = 4, 
+                                           offset = 4, 
+                                           num = input$number_of_reductions, 
+                                           what = input$image_elements)
+    
+    imageShow(react_image$im_reduced$coloring)
+  })
+  
+  output$reduced_image_plot <- renderPlot({
+    imageShow(react_image$im_reduced$reduction)
+  })
+  
+  ########################
+  ### MILS FOR STRINGS ###
+  ########################
+  
+  observeEvent(input$block_size_1D, {
+    updateSliderInput(session,
+                      "block_overlap",
+                      max = input$block_size_1D - 1)
+  })
+  
+  observeEvent(input$insert_string, {
+    updateSliderInput(session,
+                      "n_reduced",
+                      max = nchar(input$insert_string) - 2)
+  })
+  
+  output$orig_str <- renderText({
     
     input$evalButton
     isolate({
-      paste0("Original string = ", input$insertString)
+      paste0("Original string = ", input$insert_string)
       
     })
     
   })
   
-  output$mutateStr <- renderText({
+  output$mutate_str <- renderText({
     
     input$evalButton
     isolate({
       paste0("Reduced string with minimal algorithmic loss = ", 
-             simultaneousAttackOnString(input$insertString, 
-                                        blockSize= input$blockSize, 
-                                        offset = (input$blockSize - input$blockOverlap), 
+             simultaneous_attack_on_string(input$insert_string, 
+                                           block_size = input$block_size_1D, 
+                                        offset = (input$block_size - input$block_overlap), 
                                         input$alphabet, 
-                                        input$nReduced, 
+                                        input$n_reduced, 
                                         FALSE)
       )
       
@@ -198,38 +260,37 @@ shinyServer(function(input, output, session) {
   })
   
   ##### BDM 1D
-  observeEvent(input$blockSize1D, {
+  observeEvent(input$block_size_1D, {
     updateSliderInput(session,
-                      "blockOverlap",
-                      max = input$blockSize1D - 1)
+                      "block_overlap",
+                      max = input$block_size_1D - 1)
   })
   
-  observeEvent(input$insertString, {
+  observeEvent(input$insert_string, {
     updateSliderInput(session,
-                      "nReduced",
-                      max = nchar(input$insertString) - 2)
+                      "n_reduced",
+                      max = nchar(input$insert_string) - 2)
   })
   
-  output$origStr <- renderText({
+  output$orig_str <- renderText({
     
-    input$evalStringButton
+    input$eval_string_button
     isolate({
-      paste0("Original string = ", input$insertString)
+      paste0(input$insert_string)
       
     })
     
   })
   
-  output$mutateStr <- renderText({
+  output$mutate_str <- renderText({
     
-    input$evalStringButton
+    input$eval_string_button
     isolate({
-      paste0("Reduced string with minimal algorithmic information loss = ", 
-             simultaneousAttackOnString(input$insertString, 
-                                        blockSize= input$blockSize1D, 
-                                        offset = (input$blockSize1D - input$blockOverlap), 
+      paste0(simultaneous_attack_on_string(input$insert_string, 
+                                        block_size= input$block_size_1D, 
+                                        offset = (input$block_size_1D - input$block_overlap), 
                                         input$alphabet, 
-                                        input$nReduced, 
+                                        input$n_reduced, 
                                         FALSE)
       )
       

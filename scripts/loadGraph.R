@@ -1,28 +1,21 @@
 require("igraph")
 
+load_graph <- function(data_path) {
+  
+  loaded_df <- read.csv(data_path, header = FALSE, sep = ',', quote = "'",
+                       stringsAsFactors = FALSE, check.names = FALSE)
 
-loadGraph <- function(dataPath)
-{
+  # Selects numeric values, drops the rest
+  loaded_df <- loaded_df[sapply(loaded_df, is.numeric)]
   
-  loadedDF <- read.csv(dataPath,
-                       header=FALSE,
-                       sep=',', #separate by comma
-                       quote="'", # quote by '
-                       stringsAsFactors = FALSE,
-                       check.names = FALSE)
-
-  #selects numeric values, drops the rest
-  loadedDF <- loadedDF[sapply(loadedDF, is.numeric)]
+  rownames(loaded_df) <- colnames(loaded_df)
+  loaded_mat <- as.matrix(loaded_df)
   
-  rownames(loadedDF) <- colnames(loadedDF)
-  loadedMat <- as.matrix(loadedDF)
+  # loaded_mat <- unname(as.matrix(loaded_df)) 
   
-  #loadedMat <- unname(as.matrix(loadedDF)) 
-  
-  #we use the rownames to index deletions
-  g <- graph_from_adjacency_matrix(loadedMat) %>%
-    set_vertex_attr("label", value = 1:nrow(loadedDF))
-
+  # We use the rownames to index deletions
+  g <- graph_from_adjacency_matrix(loaded_mat) %>%
+    set_vertex_attr("label", value = 1:nrow(loaded_df))
   
   return(g)
 }

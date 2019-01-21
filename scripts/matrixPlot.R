@@ -2,28 +2,27 @@ require("igraph")
 require("ggplot2")
 require("reshape2")
 
-plotAdjMatrix <- function(graphToPlot){
+plot_adj_matrix <- function(graph_to_plot) {
   
-  gAdjMatrix <- as.matrix(as_adj(graphToPlot))
+  g_adj_matrix <- as.matrix(as_adj(graph_to_plot))
   
-  logMatrix <- (gAdjMatrix == 1)
+  log_matrix <- (g_adj_matrix == 1)
   
-  matData <- melt(logMatrix)
+  mat_data <- melt(log_matrix)
   
-  g <- ggplot(data = matData,
+  g <- ggplot(data = mat_data,
               aes(Var2, Var1)) + 
-    geom_tile(aes(fill = value, 
-                  color = value)) + 
-    coord_equal() + 
-    scale_fill_manual(values = c("TRUE" = "black", "FALSE" = "white")) + 
-    scale_color_manual(values = c("TRUE" = "white", "FALSE" = "black")) + 
-    theme_bw() +
-    theme(axis.title = element_blank(),
-          axis.text = element_blank(),
-          axis.ticks = element_blank(),
-          panel.grid = element_blank()) +
-    guides(fill = FALSE, color = FALSE) +
-    scale_y_reverse()
+       geom_tile(aes(fill = value, color = value)) + 
+       coord_equal() + 
+       scale_fill_manual(values = c("TRUE" = "black", "FALSE" = "white")) + 
+       scale_color_manual(values = c("TRUE" = "white", "FALSE" = "black")) + 
+       theme_bw() +
+       theme(axis.title = element_blank(),
+             axis.text = element_blank(),
+             axis.ticks = element_blank(),
+             panel.grid = element_blank()) +
+       guides(fill = FALSE, color = FALSE) +
+       scale_y_reverse()
   
   print(g)
 }

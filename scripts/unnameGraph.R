@@ -1,8 +1,8 @@
 library("igraph")
 
-unnameGraph <- function(graphToUnname){
+unname_graph <- function(graph_to_unname) {
   
-  g <- graphToUnname
+  g <- graph_to_unname
   
   V(g)$name <- 1:vcount(g)
   
