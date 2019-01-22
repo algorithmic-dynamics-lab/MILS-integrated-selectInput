@@ -1,6 +1,6 @@
-# Minimal Information Loss and Sparsification
+# Minimal Information Loss Sparsification
 
-This repository contains the [R Shiny](https://shiny.rstudio.com/) code of the online application *Minimal Information Loss And Sparsification* by the [Algorithmic Dynamics Lab](https://www.algorithmicdynamics.net/) and the [Algorithmic Nature Group](https://algorithmicnature.org/). The application is live at [this website](http://complexitycalculator.com/MILS/).
+This repository contains the [R Shiny](https://shiny.rstudio.com/) code of the online application *Minimal Information Loss Sparsification* by the [Algorithmic Dynamics Lab](https://www.algorithmicdynamics.net/) and the [Algorithmic Nature Group](https://algorithmicnature.org/). The application is live at [this website](http://complexitycalculator.com/MILS/).
 
 ### If you use this tool please cite
 
